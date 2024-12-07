@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography, Container } from '@mui/material';
-// import { auth } from '../firebase';
+import { auth } from '../firebase';  // Firebase Authentication
 import axios from 'axios';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
 
-const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+const Login = () => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,25 +16,24 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-  
+    
     try {
-      // Firebase auth user creation
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
+      // Sign in using Firebase Auth
+      const userCredential = await auth.signInWithEmailAndPassword(formData.email, formData.password);
 
-      // Create MongoDB user entry
-      const userData = {
-        name: formData.name,
-        email: formData.email,
-        firebaseId: user.uid, // Store Firebase user UID in MongoDB
-      };
+      // Get Firebase ID token (JWT)
+      const token = await userCredential.user.getIdToken();
 
-      await axios.post('http://localhost:5000/api/users/register', userData); // Your backend endpoint
+      // Send token to backend for authentication
+      const response = await axios.post('http://localhost:5000/api/users/login', { token });
 
-      alert('User registered successfully!');
+      // Handle the response (e.g., store token or redirect)
+      if (response.status === 200) {
+        alert('Logged in successfully!');
+      }
     } catch (err) {
-      setError(err.message);
-      console.error('Registration Error:', err);
+      setError('Invalid email or password');
+      console.error('Login Error:', err);
     } finally {
       setLoading(false);
     }
@@ -45,17 +42,9 @@ const Register = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 5, p: 3, boxShadow: 3, borderRadius: 2 }}>
-        <Typography variant="h4" gutterBottom>Register</Typography>
+        <Typography variant="h4" gutterBottom>Login</Typography>
         {error && <Typography color="error">{error}</Typography>}
         <form onSubmit={handleSubmit}>
-          <TextField
-            label="Name"
-            name="name"
-            fullWidth
-            margin="normal"
-            value={formData.name}
-            onChange={handleChange}
-          />
           <TextField
             label="Email"
             name="email"
@@ -75,7 +64,7 @@ const Register = () => {
             onChange={handleChange}
           />
           <Button variant="contained" color="primary" fullWidth type="submit" sx={{ mt: 2 }} disabled={loading}>
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? 'Logging in...' : 'Login'}
           </Button>
         </form>
       </Box>
@@ -83,4 +72,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Login;
